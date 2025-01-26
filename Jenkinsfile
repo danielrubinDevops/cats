@@ -2,20 +2,12 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'us-east-1' // Set your AWS region
+        AWS_REGION = 'us-east-1'
         ECR_REPO_URI = '992382545251.dkr.ecr.us-east-1.amazonaws.com/danielrubin/catnip'
-        IMAGE_TAG = 'latest' // Or use something like `env.BUILD_NUMBER` for versioning
-        DOCKERFILE_PATH = './flaskapp/Dockerfile' // Specify the Dockerfile path
-        CONTEXT_DIR = './flaskapp' // Specify the build context directory
+        IMAGE_TAG = 'latest'
     }
 
     stages {
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/danielrubinDevops/cats.git'
-            }
-        }
-
         stage('Authenticate with ECR') {
             steps {
                 script {
@@ -30,7 +22,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker build -t $ECR_REPO_URI:$IMAGE_TAG -f $DOCKERFILE_PATH $CONTEXT_DIR
+                    docker build -t $ECR_REPO_URI:$IMAGE_TAG -f ./flask-app/Dockerfile ./flask-app
                     '''
                 }
             }
