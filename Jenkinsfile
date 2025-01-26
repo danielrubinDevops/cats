@@ -5,8 +5,7 @@ pipeline {
         AWS_REGION = 'us-east-1'
         ECR_REPO_URI = '992382545251.dkr.ecr.us-east-1.amazonaws.com/danielrubin/catnip'
         IMAGE_TAG = 'latest'
-        REMOTE_SERVER = 'ubuntu@192.168.2.70' // SSH target server
-        SSH_KEY_PATH = '~/sshkey'  // Path to your SSH private key
+        EC2_INSTANCE_IP = '54.147.46.142'  // Replace with your EC2 public IP
     }
 
     stages {
@@ -40,19 +39,20 @@ pipeline {
             }
         }
 
-        stage('Deploy to Remote Server') {
+        stage('Deploy to EC2') {
             steps {
                 script {
-                    sh """
-                    ssh -i $SSH_KEY_PATH $REMOTE_SERVER '
-                    echo "Pulling Docker image from ECR and starting container on remote server"
+                    sh '''
+                    # SSH into EC2 instance and run the Docker container with port 80 exposed
+                    ssh -o StrictHostKeyChecking=no -i ~/sshkey ubuntu@$EC2_INSTANCE_IP << 'EOF'
+                    # Pull the Docker image from ECR
                     aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
                     docker pull $ECR_REPO_URI:$IMAGE_TAG
-                    docker stop catnip-container || true
-                    docker rm catnip-container || true
-                    docker run -d --name catnip-container $ECR_REPO_URI:$IMAGE_TAG
-                    '
-                    """
+
+                    # Run the container with port 80 exposed
+                    docker run -d -p 80:80 --name catnip-container $ECR_REPO_URI:$IMAGE_TAG
+                    EOF
+                    '''
                 }
             }
         }
@@ -60,7 +60,7 @@ pipeline {
 
     post {
         success {
-            echo 'Image pushed to ECR and deployed to remote server successfully!'
+            echo 'Image pushed to ECR and deployed to EC2 successfully!'
         }
         failure {
             echo 'Pipeline failed.'
